@@ -38,9 +38,6 @@ int main(int argc, char* argv[]) {
 		return -1;
 	}
 
-	struct libnet_ethernet_hdr *ptr_ethernet;
-	struct libnetipv4_hdr *ptr_ipv4;
-	struct libnet_tcp_hdr *ptr_tcp;
 
 	while (true) {
 		struct pcap_pkthdr* header; //time & length
@@ -48,26 +45,57 @@ int main(int argc, char* argv[]) {
 		int res = pcap_next_ex(pcap, &header, &packet);
 		
 		//ehternet
-		ptr_ethernet = packet;
+		struct libnet_ethernet_hdr *ptr_ethernet = packet;
 			//src_mac
-		printf("\nsrc_mac : ");
+		printf("src_mac  : ");
 		for(int i = 0; i < 6; i++){
 			printf("%02x", *(ptr_ethernet->ether_shost + i));
 			if(i < 5) putchar(':');
+			else putchar('\n');
 		}
 			//dst_mac
-		printf("\ndst_mac : ");
+		printf("dst_mac  : ");
 		for(int i = 0; i < 6; i++){
 			printf("%02x", *(ptr_ethernet->ether_dhost + i));
 			if(i < 5) putchar(':');
+			else putchar('\n');
 		}
 
 		//ip
-		ptr_ipv4 = ptr_ethernet + 14;
-		printf("\nsrc_ip  : ");
-		printf("%u", *(ptr_ipv4->in_addr));
+		struct libnet_ipv4_hdr *ptr_ipv4 = packet + 14;
+			//src_ip
+		printf("src_ip   : ");
+		uint32_t src_ip = ntohl(ptr_ipv4->ip_src.s_addr);
+		printf("%u.%u.%u.%u\n", src_ip >> 24, (src_ip >> 16) & 0xff, (src_ip >> 8) & 0xff, src_ip & 0xff);
 
-		//printf("\ndst_ip  : ");
+			//dst_ip
+		printf("dst_ip   : ");
+		uint32_t dst_ip = ntohl(ptr_ipv4->ip_dst.s_addr);
+		printf("%u.%u.%u.%u\n", dst_ip >> 24, (dst_ip >> 16) & 0xff, (dst_ip >> 8) & 0xff, dst_ip & 0xff);
+
+		//tcp
+		struct libnet_tcp_hdr *ptr_tcp = packet + 34;
+			//src_port
+		printf("src_port : ");
+		printf("%d\n", ntohs(ptr_tcp->th_sport));
+
+			//dst_port
+		printf("dst_port : ");
+		printf("%d\n", ntohs(ptr_tcp->th_dport));
+
+		//Payload
+		uint32_t len_header = 34 + (ptr_tcp->th_off) * 4;
+		printf("payload  : ");
+		if(header->caplen == len_header){
+			printf("no data\n");
+		}
+		else{
+			for(int i = 0; i < 10 && header->caplen >= len_header + i; i++){
+			       printf("%02x ", *(packet + len_header + i));
+			}
+	 		putchar('\n');
+		}
+		printf("----------------------------------------\n");		
 
 		if (res == 0) continue;
 		if (res == PCAP_ERROR || res == PCAP_ERROR_BREAK) {
