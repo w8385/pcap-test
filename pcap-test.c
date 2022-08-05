@@ -39,18 +39,35 @@ int main(int argc, char* argv[]) {
 	}
 
 	struct libnet_ethernet_hdr *ptr_ethernet;
-	struct libnet_ipv4_hdr*	ptr_ipv4;
-	struct libnet_tcp_hdr* ptr_tcp;
+	struct libnetipv4_hdr *ptr_ipv4;
+	struct libnet_tcp_hdr *ptr_tcp;
 
 	while (true) {
 		struct pcap_pkthdr* header; //time & length
 		const u_char* packet;
 		int res = pcap_next_ex(pcap, &header, &packet);
 		
-		ptr_ethernet = header;
-		printf("ether_dhost : %x\n", *ptr_ethernet->ether_dhost);
-		printf("ether_dhost : %x\n", *ptr_ethernet->ether_shost);
-		putchar('\n');
+		//ehternet
+		ptr_ethernet = packet;
+			//src_mac
+		printf("\nsrc_mac : ");
+		for(int i = 0; i < 6; i++){
+			printf("%02x", *(ptr_ethernet->ether_shost + i));
+			if(i < 5) putchar(':');
+		}
+			//dst_mac
+		printf("\ndst_mac : ");
+		for(int i = 0; i < 6; i++){
+			printf("%02x", *(ptr_ethernet->ether_dhost + i));
+			if(i < 5) putchar(':');
+		}
+
+		//ip
+		ptr_ipv4 = ptr_ethernet + 14;
+		printf("\nsrc_ip  : ");
+		printf("%u", *(ptr_ipv4->in_addr));
+
+		//printf("\ndst_ip  : ");
 
 		if (res == 0) continue;
 		if (res == PCAP_ERROR || res == PCAP_ERROR_BREAK) {
