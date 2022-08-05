@@ -38,13 +38,23 @@ int main(int argc, char* argv[]) {
 		return -1;
 	}
 
-
 	while (true) {
-		struct pcap_pkthdr* header; //time & length
-		const u_char* packet;
+		struct pcap_pkthdr* header; 	//time & length
+		const u_char* packet;		//packet pointer
 		int res = pcap_next_ex(pcap, &header, &packet);
 		
-		//ehternet
+		//ether_type check
+		struct libnet_ethernet_hdr *ptr_ether_check = packet;
+		if(ptr_ether_check->ether_type != 8){
+			continue;
+		}
+		//tcp check
+		struct libnet_ipv4_hdr *ptr_tcp_check = packet + 14;
+		if(ptr_tcp_check->ip_p != 6){
+			continue;
+		}
+		
+		//ethernet
 		struct libnet_ethernet_hdr *ptr_ethernet = packet;
 			//src_mac
 		printf("src_mac  : ");
@@ -67,7 +77,6 @@ int main(int argc, char* argv[]) {
 		printf("src_ip   : ");
 		uint32_t src_ip = ntohl(ptr_ipv4->ip_src.s_addr);
 		printf("%u.%u.%u.%u\n", src_ip >> 24, (src_ip >> 16) & 0xff, (src_ip >> 8) & 0xff, src_ip & 0xff);
-
 			//dst_ip
 		printf("dst_ip   : ");
 		uint32_t dst_ip = ntohl(ptr_ipv4->ip_dst.s_addr);
@@ -77,11 +86,10 @@ int main(int argc, char* argv[]) {
 		struct libnet_tcp_hdr *ptr_tcp = packet + 34;
 			//src_port
 		printf("src_port : ");
-		printf("%d\n", ntohs(ptr_tcp->th_sport));
-
+		printf("%u\n", ntohs(ptr_tcp->th_sport));
 			//dst_port
 		printf("dst_port : ");
-		printf("%d\n", ntohs(ptr_tcp->th_dport));
+		printf("%u\n", ntohs(ptr_tcp->th_dport));
 
 		//Payload
 		uint32_t len_header = 34 + (ptr_tcp->th_off) * 4;
@@ -99,12 +107,8 @@ int main(int argc, char* argv[]) {
 
 		if (res == 0) continue;
 		if (res == PCAP_ERROR || res == PCAP_ERROR_BREAK) {
-			//printf("pcap_next_ex return %d(%s)\n", res, pcap_geterr(pcap));
 			break;
 		}
-		//printf("%u bytes captured\n", header->caplen);
-		
-		//printf("data : %s \n", packet);
 	}
 
 	pcap_close(pcap);
